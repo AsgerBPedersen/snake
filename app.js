@@ -1,16 +1,23 @@
-const readline = require('readline');
+//const readline = require('readline');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 
 const state = {
     time: 0,
-    size: 10,
-    snake: [[3,1],[3,0],[2,1]], // index 0 is row, index 1 is columns
+    size: 50,
+    snake: [[3,1],[3,0]], // index 0 is row, index 1 is columns
     apple: [1,1],
     score: 0,
     snakeDirection: 1,
     direction: 1, //0 = north, 1 = east, 2 south, 3 west
     path: []
 }
-moves = (node, allNodes, bool) => {
+
+const xy = c => Math.round(c * canvas.width / state.size);
+const pointEq = (x, y) => (x[0] == y[0] && x[1] == y[1])? true : false;
+
+
+const moves = (node, allNodes, bool) => {
     const {size} = state;
     const directions = [[-1, 0], [0, 1], [1,0], [0, -1]];  //0 = north, 1 = east, 2 south, 3 west
     let result = [];
@@ -27,14 +34,14 @@ moves = (node, allNodes, bool) => {
         } else {
             newEdge = [node[0] + d[0],node[1] + d[1]]
         }
-        const edge = allNodes.find(n => {return (n[0] == newEdge[0] && n[1] == newEdge[1])});
+        const edge = allNodes.find(n => pointEq(n, newEdge));
         if(bool) {
             if(edge) {
                 result.push(edge)
             }
         } else {
             if(edge == undefined) {
-                result.push(edge)
+                result.push(newEdge)
             }
         }
     });
@@ -62,7 +69,7 @@ pathFinder = ({snake, apple, size}) => {
     let current;
     while(frontier.length != 0) {
         current = frontier.shift();
-        if(current[0] == apple[0] && current[1] == apple[1]) {
+        if(pointEq(current, apple)) {
             break;
         }
         const newEdges = moves(current, nodes, true);
@@ -79,36 +86,69 @@ pathFinder = ({snake, apple, size}) => {
         path.unshift(current);
         current = visited.get(current);
     }
+    if(path.length == 0) {
+        const nextMoves = moves(snake[0], snake, false);
+        
+        if(nextMoves.length == 0) {
+            willCollide()
+        } else {
+            path.push(nextMoves[Math.floor(Math.random()*nextMoves.length)])
+        }
+    }
     return path;
 }
 
 
 draw = ({ snake, apple, size, score }) => {
 
-    let map = "";
+    ctx.fillStyle = '#232323';
+    ctx.fillRect(0,0,canvas.width, canvas.height);
 
-    for (let i = 0; i < size; i++) {
+    ctx.fillStyle = 'rgb(0,200,50)';
+    snake.map(s => ctx.fillRect(xy(s[1]), xy(s[0]), xy(1), xy(1)));
 
-        let line = Array.from(" ".repeat(size) + "\n");
+    ctx.fillStyle = 'rgb(255,50,0)';
+    ctx.fillRect(xy(apple[1]), xy(apple[0]), xy(1), xy(1));
+    // let map = "";
+
+    // for (let i = 0; i < size; i++) {
+
+    //     let line = Array.from(" ".repeat(size) + "\n");
         
-        if(snake.some(e => e[0] == i)) 
-            {
-                const snakes = snake.filter(e => { if (e[0] == i) return e });
+    //     if(snake.some(e => e[0] == i)) 
+    //         {
+    //             const snakes = snake.filter(e => { if (e[0] == i) return e });
                 
-                snakes.forEach(e => line[e[1]] = "x");
+    //             snakes.forEach(e => line[e[1]] = "x");
                 
-            }
-        if(apple[0] == i) {
-            line[apple[1]] = "o"
-        }
-            for(let y = 0; y < size; y++) {
-                line[y] += " ";
-            }
-            map += line.join('');
-        }
-    console.clear();
-    console.log(map);
-    console.log(score)
+    //         }
+    //     if(apple[0] == i) {
+    //         line[apple[1]] = "o"
+    //     }
+    //         for(let y = 0; y < size; y++) {
+    //             line[y] += " ";
+    //         }
+    //         map += line.join('');
+    //     }
+    // console.clear();
+    // console.log(map);
+    // console.log(score)
+};
+
+drawPath = ({ snake, apple, size, score }, frontier) => {
+
+    ctx.fillStyle = '#232323';
+    ctx.fillRect(0,0,canvas.width, canvas.height);
+
+    ctx.fillStyle = 'rgb(0,200,50)';
+    snake.map(s => ctx.fillRect(xy(s[1]), xy(s[0]), xy(1), xy(1)));
+
+    ctx.fillStyle = 'rgb(255,50,0)';
+    ctx.fillRect(xy(apple[1]), xy(apple[0]), xy(1), xy(1));
+
+    ctx.fillStyle = 'rgb(0,50,255)';
+    frontier.map(f => ctx.fillRect(xy(f[1]), xy(f[0]), xy(1), xy(1)))
+
 };
 
 willEat = ({ size, snake, apple, score }) => {
@@ -117,7 +157,7 @@ willEat = ({ size, snake, apple, score }) => {
    while(snake.some(e => e[0] == state.apple[0] && e[1] == state.apple[1])) {
     state.apple = [Math.floor(Math.random()* size), Math.floor(Math.random()* size)];
    }
-   state.path = pathFinder(state);
+   
 };
 
 willCollide = () => {
@@ -185,38 +225,41 @@ moveSnake = ({ path, size, snake, apple, direction, snakeDirection }) => {
     //         state.snakeDirection = direction;
     //     };  break
     // }
-    let nextMove;
-    if (path[0] == undefined) {
-       const nextMoves = moves(snake[0], snake, false);
-       if(nextMoves[0] != undefined) {
-           nextMove = nextMoves[0];
-       } else {
-        willCollide()
-       }
-    } else {
-        nextMove = path.shift();
-    }
-    if(snake.some(e => e[0] == nextMove[0] && nextMove[1] == e[1])) {
+    // let nextMove;
+    // if (path[0] == undefined) {
+    //    const nextMoves = moves(snake[0], snake, false);
+    //    console.log(nextMoves);
+    //    if(nextMoves[0] != undefined) {
+    //        nextMove = nextMoves[0];
+    //    } else {
+    //     willCollide()
+    //    }
+    // } else {
+    // }
+    const nextMove = path.shift();
+    if(snake.some(e => pointEq(e, nextMove))) {
         willCollide()
     }
     snake.unshift(nextMove)
     
-    if (snake[0][0] == apple[0] && snake[0][1] == apple[1]) {
+    if (pointEq(snake[0], apple)) {
         willEat(state);
     } else {
         snake.pop();
-        path = pathFinder(state);
     }
+    state.path = pathFinder(state);
 }
 
-step = t1 => {
+
+step = t1 => t2 => {
     
-    if( t1 - state.time > 80 ) {
+    if( t2 - t1 > 20 ) {
         moveSnake(state);
-        
         draw(state);
-        
-        state.time = t1;
+        window.requestAnimationFrame(step(t2))
+    }
+    else {
+        window.requestAnimationFrame(step(t1))
     }
 };
 
@@ -235,4 +278,6 @@ step = t1 => {
 
 state.path = pathFinder(state);
 
-setInterval(() => step(Date.now()), 80)
+draw(state)
+window.requestAnimationFrame(step(0))
+//setInterval(() => step(Date.now()), 40)
