@@ -4,14 +4,18 @@ const ctx = canvas.getContext('2d');
 
 const state = {
     time: 0,
-    size: 50,
+    size: 20,
     snake: [[3,1],[3,0]], // index 0 is row, index 1 is columns
     apple: [1,1],
     score: 0,
+    frontier: [],
+    calcPath: false,
     snakeDirection: 1,
     direction: 1, //0 = north, 1 = east, 2 south, 3 west
     path: []
 }
+
+
 
 const xy = c => Math.round(c * canvas.width / state.size);
 const pointEq = (x, y) => (x[0] == y[0] && x[1] == y[1])? true : false;
@@ -45,9 +49,7 @@ const moves = (node, allNodes, bool) => {
             }
         }
     });
-    // console.log(node);
-    // console.log(allNodes);
-    // console.log(result);
+    
     return result;
 }
 
@@ -76,9 +78,13 @@ pathFinder = ({snake, apple, size}) => {
         newEdges.forEach(e => {
             if(!visited.has(e)) {
                 frontier.push(e);
-                visited.set(e, current)
+                visited.set(e, current);
+                if(state.calcPath) {
+                    state.frontier.push(frontier.map(f => f))
+                }
             }
         });
+        
     }
 
     let path = [];
@@ -105,7 +111,7 @@ draw = ({ snake, apple, size, score }) => {
     ctx.fillRect(0,0,canvas.width, canvas.height);
 
     ctx.fillStyle = 'rgb(0,200,50)';
-    snake.map(s => ctx.fillRect(xy(s[1]), xy(s[0]), xy(1), xy(1)));
+    snake.map(s,i => ctx.fillRect(xy(s[1]), xy(s[0]), xy(1), xy(1)) if(i==0));
 
     ctx.fillStyle = 'rgb(255,50,0)';
     ctx.fillRect(xy(apple[1]), xy(apple[0]), xy(1), xy(1));
@@ -135,7 +141,7 @@ draw = ({ snake, apple, size, score }) => {
     // console.log(score)
 };
 
-drawPath = ({ snake, apple, size, score }, frontier) => {
+drawFrontier = ({ snake, apple, size, score }, frontier) => {
 
     ctx.fillStyle = '#232323';
     ctx.fillRect(0,0,canvas.width, canvas.height);
@@ -146,9 +152,14 @@ drawPath = ({ snake, apple, size, score }, frontier) => {
     ctx.fillStyle = 'rgb(255,50,0)';
     ctx.fillRect(xy(apple[1]), xy(apple[0]), xy(1), xy(1));
 
-    ctx.fillStyle = 'rgb(0,50,255)';
-    frontier.map(f => ctx.fillRect(xy(f[1]), xy(f[0]), xy(1), xy(1)))
+    ctx.fillStyle = '#fefefe';
+    const newFrontier = frontier.shift();
+    newFrontier.map(f => ctx.fillRect(xy(f[1]), xy(f[0]), xy(1), xy(1)));
 
+    if(frontier.length == 0) {
+        state.calcPath = false;
+        state.frontier = [];
+    }
 };
 
 willEat = ({ size, snake, apple, score }) => {
@@ -244,6 +255,7 @@ moveSnake = ({ path, size, snake, apple, direction, snakeDirection }) => {
     
     if (pointEq(snake[0], apple)) {
         willEat(state);
+        state.calcPath = true;
     } else {
         snake.pop();
     }
@@ -252,14 +264,25 @@ moveSnake = ({ path, size, snake, apple, direction, snakeDirection }) => {
 
 
 step = t1 => t2 => {
-    
-    if( t2 - t1 > 20 ) {
-        moveSnake(state);
-        draw(state);
-        window.requestAnimationFrame(step(t2))
-    }
-    else {
-        window.requestAnimationFrame(step(t1))
+    if(state.calcPath) {
+        
+        if( t2 - t1 > 1 ) {
+            console.log(state.frontier);
+            drawFrontier(state, state.frontier);
+            window.requestAnimationFrame(step(t2))
+        }
+        else {
+            window.requestAnimationFrame(step(t1))
+        }
+    } else {
+        if( t2 - t1 > 10 ) {
+            moveSnake(state);
+            draw(state);
+            window.requestAnimationFrame(step(t2))
+        }
+        else {
+            window.requestAnimationFrame(step(t1))
+        }
     }
 };
 
