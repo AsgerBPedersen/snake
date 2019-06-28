@@ -111,7 +111,7 @@ draw = ({ snake, apple, size, score }) => {
     ctx.fillRect(0,0,canvas.width, canvas.height);
 
     ctx.fillStyle = 'rgb(0,200,50)';
-    snake.map(s,i => ctx.fillRect(xy(s[1]), xy(s[0]), xy(1), xy(1)) if(i==0));
+    snake.map(s => ctx.fillRect(xy(s[1]), xy(s[0]), xy(1), xy(1)));
 
     ctx.fillStyle = 'rgb(255,50,0)';
     ctx.fillRect(xy(apple[1]), xy(apple[0]), xy(1), xy(1));
@@ -149,12 +149,12 @@ drawFrontier = ({ snake, apple, size, score }, frontier) => {
     ctx.fillStyle = 'rgb(0,200,50)';
     snake.map(s => ctx.fillRect(xy(s[1]), xy(s[0]), xy(1), xy(1)));
 
-    ctx.fillStyle = 'rgb(255,50,0)';
-    ctx.fillRect(xy(apple[1]), xy(apple[0]), xy(1), xy(1));
-
     ctx.fillStyle = '#fefefe';
     const newFrontier = frontier.shift();
     newFrontier.map(f => ctx.fillRect(xy(f[1]), xy(f[0]), xy(1), xy(1)));
+    
+    ctx.fillStyle = 'rgb(255,50,0)';
+    ctx.fillRect(xy(apple[1]), xy(apple[0]), xy(1), xy(1));
 
     if(frontier.length == 0) {
         state.calcPath = false;
