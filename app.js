@@ -1,6 +1,8 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
+//TODO: toggle pathfinding
+
 const state = {
     time: 0,
     size: 50,
@@ -9,19 +11,17 @@ const state = {
     score: 0,
     frontier: [],
     calcPath: false,
-    snakeDirection: 1,
-    direction: 1, //0 = north, 1 = east, 2 south, 3 west
     path: []
 }
 
 
-
+// helper functions
 const xy = c => Math.round(c * canvas.width / state.size);
 const pointEq = (x, y) => (x[0] == y[0] && x[1] == y[1])? true : false;
 const pointObjEq = (x, y) => (x.x == y.x && x.y == y.y)? true : false;
 const calcDistance = (x1,x2,y1,y2) => (x2 - x1 > (0.5 * state.size)? state.size - (x2 - x1) : x2 - x1) + (y2 - y1 > (0.5 * state.size)? state.size - (y2 - y1) : y2 - y1);
 
-
+// calculates the next available moves
 const moves = (node, allNodes, bool) => {
     const {size} = state;
     const directions = [[-1, 0], [0, 1], [1,0], [0, -1]];  //0 = north, 1 = east, 2 south, 3 west
@@ -54,6 +54,7 @@ const moves = (node, allNodes, bool) => {
     return result;
 }
 
+// djikstra/breadth first pathfinding
 const pathFinder = ({snake, apple, size}) => {
     
     let nodes = [];
@@ -105,6 +106,7 @@ const pathFinder = ({snake, apple, size}) => {
     return path;
 }
 
+// calculates the next available moves with distance relative to the apple
 const movesWithDistance = (node, allNodes) => {
     const {size} = state;
     const directions = [[-1, 0], [0, 1], [1,0], [0, -1]];  //0 = north, 1 = east, 2 south, 3 west
@@ -166,6 +168,7 @@ const movesWithDistance = (node, allNodes) => {
     return result;
 }
 
+// A star pathfinding
 const pathFinderAStar = ({snake, apple, size}) => {
     
     let nodes = [];
@@ -204,6 +207,8 @@ const pathFinderAStar = ({snake, apple, size}) => {
         newEdges.forEach(e => {
             if(!visited.has(e)) {
                 frontier.push(e);
+
+                //TODO: frontier shouldnt be sorted each time, just insert the new edge at the correct index
                 frontier.sort((a,b) => a.distance - b.distance);
                 visited.set(e, current);
                 if(state.calcPath) {
@@ -232,50 +237,41 @@ const pathFinderAStar = ({snake, apple, size}) => {
     return path;
 }
 
+// draws the current state of the game to the canvas, and draws the frontier if supplied
+const draw = ({ snake, apple}, frontier = null) => {
 
-const draw = ({ snake, apple, size, score }) => {
-
+    // background
     ctx.fillStyle = '#232323';
     ctx.fillRect(0,0,canvas.width, canvas.height);
 
+    // snake
     ctx.fillStyle = 'rgb(0,200,50)';
     snake.map(s => ctx.fillRect(xy(s[1]), xy(s[0]), xy(1), xy(1)));
 
+    // snakes eyes
     ctx.fillStyle = '#232323';
     ctx.fillRect(xy(snake[0][1]) + xy(0.4), xy(snake[0][0]) + xy(0.15), xy(0.2),xy(0.2))
     ctx.fillRect(xy(snake[0][1]) + xy(0.4), xy(snake[0][0]) + xy(0.65), xy(0.2),xy(0.2))
 
-    ctx.fillStyle = 'rgb(255,50,0)';
-    ctx.fillRect(xy(apple[1]), xy(apple[0]), xy(1), xy(1));
-    
-};
-
-const drawFrontier = ({ snake, apple, size, score }, frontier) => {
-
-    ctx.fillStyle = '#232323';
-    ctx.fillRect(0,0,canvas.width, canvas.height);
-
-    ctx.fillStyle = 'rgb(0,200,50)';
-    snake.map(s => ctx.fillRect(xy(s[1]), xy(s[0]), xy(1), xy(1)));
-
-    ctx.fillStyle = '#232323';
-    ctx.fillRect(xy(snake[0][1]) + xy(0.4), xy(snake[0][0]) + xy(0.15), xy(0.2),xy(0.2))
-    ctx.fillRect(xy(snake[0][1]) + xy(0.4), xy(snake[0][0]) + xy(0.65), xy(0.2),xy(0.2))
-
-    ctx.fillStyle = '#fefefe';
-    const newFrontier = frontier.shift();
-    newFrontier.map(f => ctx.fillRect(xy(f.y), xy(f.x), xy(1), xy(1)));
-    
-    ctx.fillStyle = 'rgb(255,50,0)';
-    ctx.fillRect(xy(apple[1]), xy(apple[0]), xy(1), xy(1));
-
-    if(frontier.length == 0) {
-        state.calcPath = false;
-        state.frontier = [];
+    //frontier
+    if(frontier) {
+        ctx.fillStyle = '#fefefe';
+        const newFrontier = frontier.shift();
+        newFrontier.map(f => ctx.fillRect(xy(f.y), xy(f.x), xy(1), xy(1)));
+        if(frontier.length == 0) {
+            state.calcPath = false;
+            state.frontier = [];
+        }
     }
+
+    // apple
+    ctx.fillStyle = 'rgb(255,50,0)';
+    ctx.fillRect(xy(apple[1]), xy(apple[0]), xy(1), xy(1));
+    
 };
 
-const willEat = ({ size, snake, apple, score }) => {
+// called when the snake will eat the apple. calculates a random cords for a new apple
+const willEat = ({ size, snake}) => {
    state.score += 10; 
    state.apple = [Math.floor(Math.random()* size), Math.floor(Math.random()* size)];
    while(snake.some(e => e[0] == state.apple[0] && e[1] == state.apple[1])) {
@@ -284,12 +280,16 @@ const willEat = ({ size, snake, apple, score }) => {
    
 };
 
+// called when the snake collides with itself
 const willCollide = () => {
     console.log("game over");
+
+    // TODO: add a real game over that doesnt just crash
     process.exit()
 };
 
-const moveSnake = ({ path, size, snake, apple, direction, snakeDirection }) => {
+// moves the snake and calls the relevant functions, then calculates a new path
+const moveSnake = ({ path, snake, apple}) => {
 
     const nextMove = path.shift();
     if(snake.some(e => pointEq(e, nextMove))) {
@@ -306,23 +306,24 @@ const moveSnake = ({ path, size, snake, apple, direction, snakeDirection }) => {
     state.path = pathFinderAStar(state);
 }
 
-
+// controls the pace of the game. adjust if statements to increase/decrease game speed
 const step = t1 => t2 => {
+
+    //draws the path progression
     if(state.calcPath) {
         
         if( t2 - t1 > 20 ) {
             
-            drawFrontier(state, state.frontier);
+            draw(state, state.frontier);
             window.requestAnimationFrame(step(t2))
         }
         else {
             window.requestAnimationFrame(step(t1))
         }
-    } else {
+    } else { // controls the game
         if( t2 - t1 > 20 ) {
             moveSnake(state);
             draw(state);
-            console.log(state);
             window.requestAnimationFrame(step(t2))
         }
         else {
@@ -331,9 +332,8 @@ const step = t1 => t2 => {
     }
 };
 
-
+// initializes the first path and starts the gane
 state.path = pathFinderAStar(state);
-
-draw(state)
-window.requestAnimationFrame(step(0))
+draw(state);
+window.requestAnimationFrame(step(0));
 
