@@ -1,7 +1,7 @@
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+const btn = document.getElementById('btn')
 
-//TODO: toggle pathfinding
 
 const state = {
     time: 0,
@@ -11,8 +11,22 @@ const state = {
     score: 0,
     frontier: [],
     calcPath: false,
-    path: []
+    path: [],
+    pathfinding: "breadth first"
 }
+
+//pathfinding toggle
+const togglePath = () => {
+    if(state.pathfinding == "breadth first") {
+        state.pathfinding = "aStar";
+        
+    } else {
+        state.pathfinding = "breadth first"
+    }
+    btn.innerHTML = state.pathfinding;
+}
+
+btn.addEventListener("click", togglePath);
 
 
 // helper functions
@@ -82,7 +96,7 @@ const pathFinder = ({snake, apple, size}) => {
                 frontier.push(e);
                 visited.set(e, current);
                 if(state.calcPath) {
-                    state.frontier.push(frontier.map(f => f))
+                    state.frontier.push(frontier.map(f => {return {x:f[0], y:f[1]}}))
                 }
             }
         });
@@ -303,7 +317,12 @@ const moveSnake = ({ path, snake, apple}) => {
     } else {
         snake.pop();
     }
-    state.path = pathFinderAStar(state);
+
+    if(state.pathfinding == "breadth first") {
+        state.path = pathFinder(state);
+    } else {
+        state.path = pathFinderAStar(state);
+    }
 }
 
 // controls the pace of the game. adjust if statements to increase/decrease game speed
