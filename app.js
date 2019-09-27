@@ -1,18 +1,26 @@
+
+
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const btn = document.getElementById('btn')
 
 
+//nerual network stuff
+const inputs = 25;
+const hidden = 45;
+const outputs = 3;
+const data = [["1","2","3","4","5","6","7","8","9","left","straight","right"]]
 const state = {
     time: 0,
-    size: 50,
+    size: 10,
     snake: [[3,1],[3,0]], // index 0 is row, index 1 is columns
-    apple: [1,1],
+    apple: [1,9],
     score: 0,
     frontier: [],
     calcPath: false,
     path: [],
-    pathfinding: "breadth first"
+    pathfinding: "aStar",
+    vision: 3
 }
 
 //pathfinding toggle
@@ -34,6 +42,47 @@ const xy = c => Math.round(c * canvas.width / state.size);
 const pointEq = (x, y) => (x[0] == y[0] && x[1] == y[1])? true : false;
 const pointObjEq = (x, y) => (x.x == y.x && x.y == y.y)? true : false;
 const calcDistance = (x1,x2,y1,y2) => (x2 - x1 > (0.5 * state.size)? state.size - (x2 - x1) : x2 - x1) + (y2 - y1 > (0.5 * state.size)? state.size - (y2 - y1) : y2 - y1);
+
+//#region code
+
+const getVision = (state) => {
+    const {vision, snake, apple, size} = state;
+    const range = Math.floor(vision / 2); 
+    let vis = [];
+    
+    for (let i = 0; i < vision; i++) {
+        for (let j = 0; j < vision; j++) {
+            let cord = [];
+            
+
+            if(snake[0][0] + i - range <= -1) {
+                cord.push(size + snake[0][0] + i - range);
+            } else if(snake[0][0] + i - range >= size) {
+                cord.push(snake[0][0] + i - range -1);
+            } else {
+                cord.push(snake[0][0] + i - range)
+            }
+
+            if(snake[0][1] + j - range <= -1) {
+                cord.push(size + snake[0][1] + j - range);
+            } else if(snake[0][1] + j - range >= size) {
+                cord.push(snake[0][1] + j - range -1);
+            } else {
+                cord.push(snake[0][1] + j - range)
+            }
+
+            if(snake.find(s => pointEq(s, cord))) {
+                vis.push(-1);
+            } else if (pointEq(apple, cord)) {
+                vis.push(1)
+            } else {
+                vis.push(0)
+            }
+            
+        }
+    }
+    return vis;
+}
 
 // calculates the next available moves
 const moves = (node, allNodes, bool) => {
@@ -212,7 +261,7 @@ const pathFinderAStar = ({snake, apple, size}) => {
     while(frontier.length != 0) {
         
         current = frontier.shift();
-        console.log(current);
+        //console.log(current);
         if(pointEq([current.x, current.y], apple)) {
             break;
         }
@@ -247,7 +296,7 @@ const pathFinderAStar = ({snake, apple, size}) => {
             path.push(nextMoves[Math.floor(Math.random()*nextMoves.length)])
         }
     }
-    console.log(path);
+    //console.log(path);
     return path;
 }
 
@@ -267,7 +316,7 @@ const draw = ({ snake, apple}, frontier = null) => {
     ctx.fillRect(xy(snake[0][1]) + xy(0.4), xy(snake[0][0]) + xy(0.15), xy(0.2),xy(0.2))
     ctx.fillRect(xy(snake[0][1]) + xy(0.4), xy(snake[0][0]) + xy(0.65), xy(0.2),xy(0.2))
 
-    //frontier
+    frontier
     if(frontier) {
         ctx.fillStyle = '#fefefe';
         const newFrontier = frontier.shift();
@@ -329,7 +378,9 @@ const moveSnake = ({ path, snake, apple}) => {
 const step = t1 => t2 => {
 
     //draws the path progression
-    if(state.calcPath) {
+    if(false
+        //state.calcPath
+        ) {
         
         if( t2 - t1 > 20 ) {
             
@@ -351,8 +402,6 @@ const step = t1 => t2 => {
     }
 };
 
-// initializes the first path and starts the gane
-state.path = pathFinderAStar(state);
-draw(state);
-window.requestAnimationFrame(step(0));
+//#endregion
+
 
