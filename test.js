@@ -1,6 +1,5 @@
-let snake = [1,1];
-
-while(snake.length != 0) {
-    snake.pop();
-    console.log("Lol");
+const test = (t1, t2) => id => {
+    return id;
 }
+const id = "blah";
+console.log(test(id));

@@ -1,14 +1,27 @@
-// const nn = new NeuralNetwork(inputs, hidden, outputs);
-// for(let i = 0; i < 10000; i++) {
-    
-// }
+const btn = document.getElementById('btn')
+//pathfinding toggle
+const togglePath = () => {
+    if(state.pathfinding == "breadth first") {
+        state.pathfinding = "aStar";
+        
+    } else {
+        state.pathfinding = "breadth first"
+    }
+    btn.innerHTML = state.pathfinding;
+}
 
-
+btn.addEventListener("click", togglePath);
 
 // initializes the first path and starts the gane
-state.path = pathFinderAStar(state);
-draw(state);
-window.requestAnimationFrame(step(0));
+const snek = new Snake();
+snek.state.path = snek.pathFinderAStar(snek.state);
+snek.draw(snek.state);
+window.requestAnimationFrame(snek.step(0));
+
+
+
+
+
 
 function exportToCsv(filename, rows) {
     var processRow = function (row) {
