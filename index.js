@@ -13,11 +13,13 @@ const togglePath = () => {
 btn.addEventListener("click", togglePath);
 
 // initializes the first path and starts the gane
-const snek = new Snake();
-snek.state.path = snek.pathFinderAStar(snek.state);
-snek.draw(snek.state);
-window.requestAnimationFrame(snek.step(0));
-
+const pop = new Population(100);
+for(let i = 0; i < 10; i++) {
+    while(!pop.done()) {
+        pop.updateAlive();
+    }
+    pop.naturalSelection();
+}
 
 
 

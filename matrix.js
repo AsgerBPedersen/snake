@@ -16,6 +16,22 @@ class NeuralNetwork {
         this.weights1.randomWeights();
     }
 
+    clone() {
+        let nn = new NeuralNetwork(this.numInputs, this.numHidden, this.numOutputs);
+        nn.bias0 = this.bias0;
+        nn.bias1 = this.bias1;
+        nn.weights0 = this.weights0;
+        nn.weights1 = this.weights1;
+    }
+
+    crossover(brain) {
+        let nn = new NeuralNetwork(this.numInputs, this.numHidden, this.numOutputs);
+        nn.bias0 = Matrix.crossover(this.bias0, brain.bias0);
+        nn.bias1 =  Matrix.crossover(this.bias1, brain.bias1);
+        nn.weights0 = Matrix.crossover(this.weights0, brain.weights0);
+        nn.weights1 = Matrix.crossover(this.weights1, brain.weights1);
+    }
+
     feedForward(inputArray) {
         // convert input array to a matrix
         this.inputs = Matrix.convertFromArray(inputArray);
@@ -178,6 +194,51 @@ class Matrix {
         }
     }
 
+    static crossover(m0, m1) {
+        Matrix.checkDimensions(m0, m1);
+
+        let m = new Matrix(m0.cols, m0.rows);
+
+        const rC = Math.floor(Math.random() * m0.cols);
+        const rR = Math.floor(Math.random() * m0.rows);
+
+        for (let i = 0; i < m0.rows; i++) {
+            for (let j = 0; j < m0.cols; j++) {
+                if((i<rR)||(i==rR && j<=rC)) {
+                    m[i][j] = m0[i][j];
+                } else {
+                    m[i][j] = m1[i][j];
+                }
+            }
+        }
+        return m;
+    }
+
+    mutate(mutationRate) {
+        for (let i = 0; i < this.rows; i++) {
+            
+            for (let j = 0; j < this.cols; j++) {
+                const rand = Math.random()
+                if(rand<mutationRate) {
+                    this.data[i][j] += this.randNd() / 5;
+                    if(this.data[i][j] > 1) this.data[i][j] = 1;
+                    if(this.data[i][j] < -1) this.data[i][j] = -1;
+                }
+            }
+        }
+    }
+
+    clone() {
+        let m = new Matrix(this.rows.length, this.cols.length);
+        for (let i = 0; i < this.rows; i++) {
+            
+            for (let j = 0; j < this.cols; j++) {
+                m[i][j] = this.data[i][j];
+            }
+        }
+        return m;
+    }
+
     randomWeights() {
         for (let i = 0; i < this.rows; i++) {
             
@@ -185,5 +246,13 @@ class Matrix {
                 this.data[i][j] = Math.random() * 2 - 1;
             }
         }
+    }
+
+    //returns a random number with a mean of 0 and standard deviation of 1.
+    randNd() {
+        var u = 0, v = 0;
+        while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+        while(v === 0) v = Math.random();
+        return Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
     }
 }

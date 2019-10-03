@@ -7,23 +7,24 @@ class Snake {
         //nerual network stuff
         this.inputs = 25;
         this.hidden = 45;
-        this.outputs = 3;
+        this.outputs = 4;
         this.data = []
 
         // snake state. rise up!
         this.state = {
-            time: 0,
             size: 10,
             snake: [[3, 1], [3, 0]], // index 0 is row, index 1 is columns
             apple: [1, 9],
             score: 0,
             frontier: [],
             calcPath: false,
-            path: [],
+            path: [[3, 2]],
             pathfinding: "aStar",
-            vision: 3,
+            vision: 5,
             lifetime: 0,
-            leftToLive: 100
+            leftToLive: 100,
+            alive: true,
+            brain: new NeuralNetwork(this.inputs, this.hidden, this.outputs)
         }
     }
 
@@ -35,9 +36,21 @@ class Snake {
     pointEq = (x, y) => (x[0] == y[0] && x[1] == y[1]) ? true : false;
     pointObjEq = (x, y) => (x.x == y.x && x.y == y.y) ? true : false;
     calcDistance = (x1, x2, y1, y2) => (x2 - x1 > (0.5 * this.state.size) ? this.state.size - (x2 - x1) : x2 - x1) + (y2 - y1 > (0.5 * this.state.size) ? this.state.size - (y2 - y1) : y2 - y1);
+    calcFitness = () => Math.floor(this.state.lifetime * this.state.lifetime * Math.pow(2, this.state.snake.length));
+
+    clone() {
+        let clone = new Snake();
+        clone.brain = this.state.brain.clone();
+        return clone;
+      }
+
+      crossover(mate) {
+        let child = new Snake();
+        child.brain = this.state.brain.crossover(mate.brain);
+        return child;
+      }
 
     //#region code
-
     getVision = () => {
         const { vision, snake, apple, size } = this.state;
         const range = Math.floor(vision / 2);
@@ -64,9 +77,9 @@ class Snake {
                     cord.push(snake[0][1] + j - range)
                 }
 
-                if (snake.find(s => pointEq(s, cord))) {
+                if (snake.find(s => this.pointEq(s, cord))) {
                     vis.push(-1);
-                } else if (pointEq(apple, cord)) {
+                } else if (this.pointEq(apple, cord)) {
                     vis.push(1)
                 } else {
                     vis.push(0)
@@ -108,58 +121,6 @@ class Snake {
         });
 
         return result;
-    }
-
-    // djikstra/breadth first pathfinding
-    pathFinder = ({ snake, apple, size }) => {
-
-        let nodes = [];
-
-        for (let i = 0; i < size; i++) {
-            for (let y = 0; y < size; y++) {
-                if (!snake.some(s => s[0] == i && s[1] == y)) {
-                    nodes.push([i, y]);
-                }
-            }
-        }
-
-        let frontier = [snake[0]];
-        let visited = new Map();
-        visited.set(snake[0], null)
-        let current;
-        while (frontier.length != 0) {
-            current = frontier.shift();
-            if (pointEq(current, apple)) {
-                break;
-            }
-            const newEdges = moves(current, nodes, true);
-            newEdges.forEach(e => {
-                if (!visited.has(e)) {
-                    frontier.push(e);
-                    visited.set(e, current);
-                    if (state.calcPath) {
-                        state.frontier.push(frontier.map(f => { return { x: f[0], y: f[1] } }))
-                    }
-                }
-            });
-
-        }
-
-        let path = [];
-        while (current != snake[0]) {
-            path.unshift(current);
-            current = visited.get(current);
-        }
-        if (path.length == 0) {
-            const nextMoves = moves(snake[0], snake, false);
-
-            if (nextMoves.length == 0) {
-                willCollide()
-            } else {
-                path.push(nextMoves[Math.floor(Math.random() * nextMoves.length)])
-            }
-        }
-        return path;
     }
 
     // calculates the next available moves with distance relative to the apple
@@ -222,6 +183,58 @@ class Snake {
         });
 
         return result;
+    }
+
+    // djikstra/breadth first pathfinding
+    pathFinder = ({ snake, apple, size }) => {
+
+        let nodes = [];
+
+        for (let i = 0; i < size; i++) {
+            for (let y = 0; y < size; y++) {
+                if (!snake.some(s => s[0] == i && s[1] == y)) {
+                    nodes.push([i, y]);
+                }
+            }
+        }
+
+        let frontier = [snake[0]];
+        let visited = new Map();
+        visited.set(snake[0], null)
+        let current;
+        while (frontier.length != 0) {
+            current = frontier.shift();
+            if (pointEq(current, apple)) {
+                break;
+            }
+            const newEdges = moves(current, nodes, true);
+            newEdges.forEach(e => {
+                if (!visited.has(e)) {
+                    frontier.push(e);
+                    visited.set(e, current);
+                    if (state.calcPath) {
+                        state.frontier.push(frontier.map(f => { return { x: f[0], y: f[1] } }))
+                    }
+                }
+            });
+
+        }
+
+        let path = [];
+        while (current != snake[0]) {
+            path.unshift(current);
+            current = visited.get(current);
+        }
+        if (path.length == 0) {
+            const nextMoves = moves(snake[0], snake, false);
+
+            if (nextMoves.length == 0) {
+                willCollide()
+            } else {
+                path.push(nextMoves[Math.floor(Math.random() * nextMoves.length)])
+            }
+        }
+        return path;
     }
 
     // A star pathfinding
@@ -293,6 +306,40 @@ class Snake {
         return path;
     }
 
+    decision = () => {
+        const des = this.state.brain.feedForward(this.getVision());
+        let move= [];
+        let max = 0;
+        const directions = [[-1, 0], [0, 1], [1, 0], [0, -1]];
+        for(let i = 0; i < des.data[0].length; i++) {
+            if(des.data[0][i] > max) {
+                max = des.data[0][i];
+                move = directions[i];
+            }
+        }
+
+        let nextMove;
+
+        if (this.state.snake[0][0] + move[0] == -1) {
+            nextMove = [this.state.size - 1, this.state.snake[0][1]];
+        } else if (this.state.snake[0][0] + move[0] == this.state.size) {
+            nextMove = [0, this.state.snake[0][1]]
+        } else if (this.state.snake[0][1] + move[1] == -1) {
+            nextMove = [this.state.snake[0][0], this.state.size - 1]
+        } else if (this.state.snake[0][1] + move[1] == this.state.size) {
+            nextMove = [this.state.snake[0][0], 0]
+        } else {
+            nextMove = [this.state.snake[0][0] + move[0], this.state.snake[0][1] + move[1]]
+        }
+        
+        if(nextMove[0] == this.state.snake[1][0] && nextMove[1] == this.state.snake[1][1]) {
+            this.willCollide()
+        }
+        this.state.path.push(nextMove);
+
+        return [nextMove];
+    }
+
     // draws the current state of the game to the canvas, and draws the frontier if supplied
     draw = ({ snake, apple }, frontier = null) => {
 
@@ -328,7 +375,8 @@ class Snake {
 
     // called when the snake will eat the apple. calculates a random cords for a new apple
     willEat = ({ size, snake }) => {
-        this.state.score += 10;
+        this.leftToLive = 100;
+        this.state.score += 1;
         this.state.apple = [Math.floor(Math.random() * size), Math.floor(Math.random() * size)];
         while (snake.some(e => e[0] == this.state.apple[0] && e[1] == this.state.apple[1])) {
             this.state.apple = [Math.floor(Math.random() * size), Math.floor(Math.random() * size)];
@@ -339,17 +387,19 @@ class Snake {
     // called when the snake collides with itself
     willCollide = () => {
         console.log("game over");
-
+        this.state.alive = false;
+        console.log(this.calcFitness());
         // TODO: add a real game over that doesnt just crash
-        process.exit()
+        
     };
 
     // moves the snake and calls the relevant functions, then calculates a new path
     moveSnake = ({ path, snake, apple }) => {
-
+        this.state.lifetime++;
+        this.state.leftToLive--;
         const nextMove = path.shift();
-        if (snake.some(e => this.pointEq(e, nextMove))) {
-            willCollide()
+        if (snake.some(e => this.pointEq(e, nextMove)) || this.state.leftToLive < 0) {
+            this.willCollide()
         }
         snake.unshift(nextMove)
 
@@ -360,17 +410,18 @@ class Snake {
             snake.pop();
         }
 
-        if (this.state.pathfinding == "breadth first") {
-            this.state.path = this.pathFinder(this.state);
-        } else {
-            this.state.path = this.pathFinderAStar(this.state);
-        }
+        this.state.path = this.decision();
+        // if (this.state.pathfinding == "breadth first") {
+        //     this.state.path = this.pathFinder(this.state);
+        // } else {
+        //     this.state.path = this.pathFinderAStar(this.state);
+        // }
     }
 
     // controls the pace of the game. adjust if statements to increase/decrease game speed
     step = t1 => t2 => {
-
-        //draws the path progression
+        if(this.state.alive) {
+            //draws the path progression
         if (false
             //state.calcPath
         ) {
@@ -393,6 +444,7 @@ class Snake {
                 window.requestAnimationFrame(this.step(t1))
             }
         }
+        } 
     };
 
     //#endregion
