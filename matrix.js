@@ -16,12 +16,20 @@ class NeuralNetwork {
         this.weights1.randomWeights();
     }
 
+    loadBrain(brain) {
+        this.bias0.loadMaxtrix(brain.bias0);
+        this.bias1.loadMaxtrix(brain.bias1);
+        this.weights0.loadMaxtrix(brain.weights0);
+        this.weights1.loadMaxtrix(brain.weights1);
+    }
+
     clone() {
         let nn = new NeuralNetwork(this.numInputs, this.numHidden, this.numOutputs);
         nn.bias0 = this.bias0;
         nn.bias1 = this.bias1;
         nn.weights0 = this.weights0;
         nn.weights1 = this.weights1;
+        return nn;
     }
 
     crossover(brain) {
@@ -30,6 +38,14 @@ class NeuralNetwork {
         nn.bias1 =  Matrix.crossover(this.bias1, brain.bias1);
         nn.weights0 = Matrix.crossover(this.weights0, brain.weights0);
         nn.weights1 = Matrix.crossover(this.weights1, brain.weights1);
+        return nn;
+    }
+
+    mutate(mutationRate) {
+        this.bias0.mutate(mutationRate);
+        this.bias1.mutate(mutationRate);
+        this.weights0.mutate(mutationRate);
+        this.weights1.mutate(mutationRate);
     }
 
     feedForward(inputArray) {
@@ -108,6 +124,12 @@ class Matrix {
                 throw new Error("Data sucks!");
             }
         }
+    }
+
+    loadMaxtrix(matrix) {
+        this.rows = matrix.rows;
+        this.cols = matrix.cols;
+        this.data = matrix.data;
     }
 
     static convertFromArray(arr) {
@@ -197,7 +219,7 @@ class Matrix {
     static crossover(m0, m1) {
         Matrix.checkDimensions(m0, m1);
 
-        let m = new Matrix(m0.cols, m0.rows);
+        let m = new Matrix(m0.rows, m0.cols);
 
         const rC = Math.floor(Math.random() * m0.cols);
         const rR = Math.floor(Math.random() * m0.rows);
@@ -205,9 +227,9 @@ class Matrix {
         for (let i = 0; i < m0.rows; i++) {
             for (let j = 0; j < m0.cols; j++) {
                 if((i<rR)||(i==rR && j<=rC)) {
-                    m[i][j] = m0[i][j];
+                    m.data[i][j] = m0.data[i][j];
                 } else {
-                    m[i][j] = m1[i][j];
+                    m.data[i][j] = m1.data[i][j];
                 }
             }
         }

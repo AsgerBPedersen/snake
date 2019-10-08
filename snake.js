@@ -6,15 +6,15 @@ class Snake {
 
         //nerual network stuff
         this.inputs = 25;
-        this.hidden = 45;
+        this.hidden = 55;
         this.outputs = 4;
         this.data = []
 
         // snake state. rise up!
         this.state = {
-            size: 10,
+            size: 12,
             snake: [[3, 1], [3, 0]], // index 0 is row, index 1 is columns
-            apple: [1, 9],
+            apple: [Math.floor(Math.random() * 12), Math.floor(Math.random() * 12)],
             score: 0,
             frontier: [],
             calcPath: false,
@@ -22,7 +22,7 @@ class Snake {
             pathfinding: "aStar",
             vision: 5,
             lifetime: 0,
-            leftToLive: 100,
+            leftToLive: 50,
             alive: true,
             brain: new NeuralNetwork(this.inputs, this.hidden, this.outputs)
         }
@@ -36,20 +36,24 @@ class Snake {
     pointEq = (x, y) => (x[0] == y[0] && x[1] == y[1]) ? true : false;
     pointObjEq = (x, y) => (x.x == y.x && x.y == y.y) ? true : false;
     calcDistance = (x1, x2, y1, y2) => (x2 - x1 > (0.5 * this.state.size) ? this.state.size - (x2 - x1) : x2 - x1) + (y2 - y1 > (0.5 * this.state.size) ? this.state.size - (y2 - y1) : y2 - y1);
-    calcFitness = () => Math.floor(this.state.lifetime * this.state.lifetime * Math.pow(2, this.state.snake.length));
+    calcFitness = () => Math.floor(this.state.lifetime * this.state.snake.length * this.state.snake.length);
 
     clone() {
         let clone = new Snake();
-        clone.brain = this.state.brain.clone();
+        clone.state.brain = this.state.brain.clone();
         return clone;
       }
 
-      crossover(mate) {
+    crossover(mate) {
         let child = new Snake();
-        child.brain = this.state.brain.crossover(mate.brain);
+        child.state.brain = this.state.brain.crossover(mate.state.brain);
         return child;
       }
-
+    
+    mutate(mutationRate) {
+        this.state.brain.mutate(mutationRate);
+    }
+    
     //#region code
     getVision = () => {
         const { vision, snake, apple, size } = this.state;
@@ -375,7 +379,7 @@ class Snake {
 
     // called when the snake will eat the apple. calculates a random cords for a new apple
     willEat = ({ size, snake }) => {
-        this.leftToLive = 100;
+        this.state.leftToLive = 50;
         this.state.score += 1;
         this.state.apple = [Math.floor(Math.random() * size), Math.floor(Math.random() * size)];
         while (snake.some(e => e[0] == this.state.apple[0] && e[1] == this.state.apple[1])) {
@@ -386,9 +390,7 @@ class Snake {
 
     // called when the snake collides with itself
     willCollide = () => {
-        console.log("game over");
         this.state.alive = false;
-        console.log(this.calcFitness());
         // TODO: add a real game over that doesnt just crash
         
     };
@@ -435,7 +437,7 @@ class Snake {
                 window.requestAnimationFrame(step(t1))
             }
         } else { // controls the game
-            if (t2 - t1 > 20) {
+            if (t2 - t1 > 200) {
                 this.moveSnake(this.state);
                 this.draw(this.state);
                 window.requestAnimationFrame(this.step(t2))

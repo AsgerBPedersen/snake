@@ -7,13 +7,13 @@ class Population {
         }
 
         this.gen = 1;//which generation we are up to 
-        this.globalBest = 4;// the best score ever achieved by this population
+        this.globalBest = 0;// the best score ever achieved by this population
         this.globalBestFitness = 0; // the best fitness ever achieved by this population
-        this.currentBest = 4;//the current best score
+        this.currentBest = 0;//the current best score
         this.currentBestSnake = 0; //the position of the current best snake (highest score) in the array
 
         this.globalBestSnake; //a clone of the best snake this population has ever seen
-        this.globalMutationRate = 0.01;
+        this.globalMutationRate = 0.1;
     }
 
     updateAlive() {
@@ -55,17 +55,17 @@ class Population {
         
         //set the first snake as the best snake without crossover or mutation
         this.setBestSnake();
-        this.newSnakes[0] = this.globalBestSnake.clone();
+        newSnakes[0] = this.globalBestSnake.clone();
         for (let i = 1; i< this.snakes.length; i++) {
           
           //select 2 parents based on fitness
-          parent1 = this.selectSnake();
-          parent2 = this.selectSnake();
+          let parent1 = this.selectSnake();
+          let parent2 = this.selectSnake();
           
           //crossover the 2 snakes to create the child
-          child = parent1.crossover(parent2);
+          let child = parent1.crossover(parent2);
           //mutate the child (weird thing to type)
-          child.mutate(globalMutationRate);
+          child.mutate(this.globalMutationRate);
           //add the child to the next generation
           newSnakes[i] = child;
           
@@ -74,8 +74,9 @@ class Population {
         this.snakes = newSnakes;// set the current generation to the next generation
         
         
-        gen+=1;
-        //currentBest = 4;
+        this.gen+=1;
+        this.currentBest = 0;
+        this.currentBestSnake = 0;
       }
 
       selectSnake() {
@@ -133,14 +134,10 @@ class Population {
     
           if (max > this.currentBest) {
             this.currentBest = max;
+            this.currentBestSnake = maxIndex;
           }
-    
-          //if the best length is more than 1 greater than the 5 stored in currentBest snake then set it;
-          //the + 5 is to stop the current best snake from jumping from snake to snake
-          if (!this.snakes[this.currentBestSnake].state.alive || max > this.snakes[this.currentBestSnake].state.snake.length +5   ) {
-    
-            this.currentBestSnake  = maxIndex;
-          }
+
+
     
           
           if (this.currentBest > this.globalBest) {

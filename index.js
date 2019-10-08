@@ -1,68 +1,66 @@
-const btn = document.getElementById('btn')
-//pathfinding toggle
-const togglePath = () => {
-    if(state.pathfinding == "breadth first") {
-        state.pathfinding = "aStar";
+// const btn = document.getElementById('btn')
+// //pathfinding toggle
+// const togglePath = () => {
+//     if(state.pathfinding == "breadth first") {
+//         state.pathfinding = "aStar";
         
-    } else {
-        state.pathfinding = "breadth first"
-    }
-    btn.innerHTML = state.pathfinding;
+//     } else {
+//         state.pathfinding = "breadth first"
+//     }
+//     btn.innerHTML = state.pathfinding;
+// }
+
+// btn.addEventListener("click", togglePath);
+const pop = new Population(2000);
+const btn = document.getElementById("nextGen");
+const btnSave = document.getElementById("btnSave");
+
+// loadJSON((response) => {
+//     pop.snakes[0].state.brain.loadBrain(JSON.parse(response));
+// })
+const ng = () => {
+    pop.globalBestSnake.state.snake = [[3, 1], [3, 0]];
+    pop.globalBestSnake.state.apple = [Math.floor(Math.random() * 12), Math.floor(Math.random() * 12)];
+    pop.globalBestSnake.state.alive = true;
+    pop.globalBestSnake.state.leftToLive = 50;
+
+    window.requestAnimationFrame(pop.globalBestSnake.step(0));
 }
 
-btn.addEventListener("click", togglePath);
-
-// initializes the first path and starts the gane
-const pop = new Population(100);
-for(let i = 0; i < 10; i++) {
+for(let i = 0; i < 2; i++) {
     while(!pop.done()) {
         pop.updateAlive();
     }
+    
     pop.naturalSelection();
+    
+    console.log(i + " " + pop.globalBestFitness);
 }
 
 
+btn.addEventListener("click", ng);
+btnSave.addEventListener("click",() => saveText(JSON.stringify(pop.snakes[0].state.brain, null, 2), "snake.json"));
 
+function saveText(text, filename){
+    var a = document.createElement('a');
+    a.setAttribute('href', 'data:text/plain;charset=utf-u,'+encodeURIComponent(text));
+    a.setAttribute('download', filename);
+    a.click()
+  }
 
+  function loadJSON(callback) {   
 
-function exportToCsv(filename, rows) {
-    var processRow = function (row) {
-        var finalVal = '';
-        for (var j = 0; j < row.length; j++) {
-            var innerValue = row[j] === null ? '' : row[j].toString();
-            if (row[j] instanceof Date) {
-                innerValue = row[j].toLocaleString();
-            };
-            var result = innerValue.replace(/"/g, '""');
-            if (result.search(/("|,|\n)/g) >= 0)
-                result = '"' + result + '"';
-            if (j > 0)
-                finalVal += ',';
-            finalVal += result;
-        }
-        return finalVal + '\n';
+    var xobj = new XMLHttpRequest();
+        xobj.overrideMimeType("application/json");
+    xobj.open('GET', 'snake.json', true); // Replace 'my_data' with the path to your file
+    xobj.onreadystatechange = function () {
+          if (xobj.readyState == 4 && xobj.status == "200") {
+            // Required use of an anonymous callback as .open will NOT return a value but simply returns undefined in asynchronous mode
+            callback(xobj.responseText);
+          }
     };
+    xobj.send(null);  
+ }
 
-    var csvFile = '';
-    for (var i = 0; i < rows.length; i++) {
-        csvFile += processRow(rows[i]);
-    }
 
-    var blob = new Blob([csvFile], { type: 'text/csv;charset=utf-8;' });
-    if (navigator.msSaveBlob) { // IE 10+
-        navigator.msSaveBlob(blob, filename);
-    } else {
-        var link = document.createElement("a");
-        if (link.download !== undefined) { // feature detection
-            // Browsers that support HTML5 download attribute
-            var url = URL.createObjectURL(blob);
-            link.setAttribute("href", url);
-            link.setAttribute("download", filename);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-    }
-}
 
